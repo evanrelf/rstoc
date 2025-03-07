@@ -7,17 +7,19 @@ use std::{
 
 #[derive(clap::Parser)]
 struct Args {
-    path: PathBuf,
+    paths: Vec<PathBuf>,
 }
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-    let source = fs::read_to_string(&args.path)?;
-    let ast = syn::parse_file(&source)?;
-    for syn_item in ast.items {
-        if let Ok(mut toc_item) = TocItem::try_from(&syn_item) {
-            toc_item.path = args.path.clone();
-            println!("{toc_item}");
+    for path in args.paths {
+        let source = fs::read_to_string(&path)?;
+        let ast = syn::parse_file(&source)?;
+        for syn_item in ast.items {
+            if let Ok(mut toc_item) = TocItem::try_from(&syn_item) {
+                toc_item.path = path.clone();
+                println!("{toc_item}");
+            }
         }
     }
     Ok(())
