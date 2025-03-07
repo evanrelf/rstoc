@@ -24,7 +24,7 @@ fn main() -> anyhow::Result<()> {
 
         for syn_item in ast.items {
             if let Ok(mut toc_item) = TocItem::try_from(&syn_item) {
-                toc_item.path.clone_from(path);
+                toc_item.path = Some(path.clone());
                 println!("{toc_item}");
             }
         }
@@ -34,7 +34,7 @@ fn main() -> anyhow::Result<()> {
 }
 
 struct TocItem<'ast> {
-    path: PathBuf,
+    path: Option<PathBuf>,
     line: usize,
     column: usize,
     token: &'static str,
@@ -44,11 +44,10 @@ struct TocItem<'ast> {
 impl<'ast> TocItem<'ast> {
     fn new(token: &'static str, ident: &'ast syn::Ident) -> Self {
         let span = ident.span();
-        let path = span.source_file().path();
         let line = span.start().line;
         let column = span.start().column + 1;
         Self {
-            path,
+            path: None,
             line,
             column,
             token,
@@ -91,14 +90,22 @@ impl<'ast> TryFrom<&'ast syn::Item> for TocItem<'ast> {
 
 impl Display for TocItem<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        write!(
-            f,
-            "{}:{}:{}:{} {}",
-            self.path.display(),
-            self.line,
-            self.column,
-            self.token,
-            self.ident
-        )
+        if let Some(path) = &self.path {
+            write!(
+                f,
+                "{}:{}:{}:{} {}",
+                path.display(),
+                self.line,
+                self.column,
+                self.token,
+                self.ident
+            )
+        } else {
+            write!(
+                f,
+                "<unknown path>:{}:{}:{} {}",
+                self.line, self.column, self.token, self.ident
+            )
+        }
     }
 }
