@@ -26,6 +26,7 @@ fn main() -> anyhow::Result<()> {
 struct TocItem<'ast> {
     path: PathBuf,
     line: usize,
+    column: usize,
     token: &'static str,
     ident: &'ast syn::Ident,
 }
@@ -35,9 +36,11 @@ impl<'ast> TocItem<'ast> {
         let span = ident.span();
         let path = span.source_file().path();
         let line = span.start().line;
+        let column = span.start().column + 1;
         Self {
             path,
             line,
+            column,
             token,
             ident,
         }
@@ -80,9 +83,10 @@ impl Display for TocItem<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         write!(
             f,
-            "{}:{}:{} {}",
+            "{}:{}:{}:{} {}",
             self.path.display(),
             self.line,
+            self.column,
             self.token,
             self.ident
         )
