@@ -30,7 +30,7 @@ async fn main(executor: smol::Executor<'_>) -> anyhow::Result<()> {
 
             for syn_item in ast.items {
                 if let Ok(mut toc_item) = TocItem::try_from(&syn_item) {
-                    toc_item.path = path.clone();
+                    toc_item.path.clone_from(&path);
                     println!("{toc_item}");
                 }
             }

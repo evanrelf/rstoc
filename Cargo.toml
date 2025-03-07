@@ -12,3 +12,6 @@ proc-macro2 = { version = "1.0.94", features = ["span-locations"] }
 smol = "2.0.2"
 smol-macros = "0.1.1"
 syn = { version = "2.0.99", default-features = false, features = ["full", "parsing", "printing", "extra-traits"] }
+
+[lints]
+clippy.pedantic = { level = "warn", priority = -1 }
