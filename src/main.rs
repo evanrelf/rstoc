@@ -1,10 +1,9 @@
 use anyhow::Context;
 use clap::Parser as _;
-use futures_concurrency::future::TryJoin as _;
-use macro_rules_attribute::apply;
-use smol_macros::main;
+use rayon::prelude::*;
 use std::{
     fmt::{self, Display},
+    fs,
     path::PathBuf,
 };
 
@@ -13,35 +12,25 @@ struct Args {
     paths: Vec<PathBuf>,
 }
 
-#[apply(main!)]
-async fn main(executor: smol::Executor<'_>) -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let mut tasks: Vec<smol::Task<anyhow::Result<()>>> = Vec::with_capacity(args.paths.len());
+    args.paths.par_iter().try_for_each(|path| {
+        let source = fs::read_to_string(path)
+            .with_context(|| format!("failed to read '{}'", path.display()))?;
 
-    for path in args.paths {
-        tasks.push(executor.spawn(async move {
-            let source = smol::fs::read_to_string(&path)
-                .await
-                .with_context(|| format!("failed to read '{}'", path.display()))?;
+        let ast = syn::parse_file(&source)
+            .with_context(|| format!("failed to parse '{}' as Rust code", path.display()))?;
 
-            let ast = syn::parse_file(&source)
-                .with_context(|| format!("failed to parse '{}' as Rust code", path.display()))?;
-
-            for syn_item in ast.items {
-                if let Ok(mut toc_item) = TocItem::try_from(&syn_item) {
-                    toc_item.path.clone_from(&path);
-                    println!("{toc_item}");
-                }
+        for syn_item in ast.items {
+            if let Ok(mut toc_item) = TocItem::try_from(&syn_item) {
+                toc_item.path.clone_from(path);
+                println!("{toc_item}");
             }
+        }
 
-            Ok(())
-        }));
-    }
-
-    tasks.try_join().await?;
-
-    Ok(())
+        Ok(())
+    })
 }
 
 struct TocItem<'ast> {
