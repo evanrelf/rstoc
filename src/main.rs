@@ -4,6 +4,7 @@ use rayon::prelude::*;
 use std::{
     fmt::{self, Display},
     fs,
+    io::{self, Write as _},
     path::{Path, PathBuf},
 };
 
@@ -17,15 +18,17 @@ fn main() -> anyhow::Result<()> {
 
     args.paths.par_iter().try_for_each(|path| {
         let source = fs::read_to_string(path)
-            .with_context(|| format!("failed to read '{}'", path.display()))?;
+            .with_context(|| format!("Failed to read '{}'", path.display()))?;
 
         let ast = syn::parse_file(&source)
-            .with_context(|| format!("failed to parse '{}' as Rust code", path.display()))?;
+            .with_context(|| format!("Failed to parse '{}' as Rust code", path.display()))?;
+
+        let mut stdout = io::stdout().lock();
 
         for syn_item in ast.items {
             if let Ok(mut toc_item) = TocItem::try_from(&syn_item) {
                 toc_item.path = Some(path);
-                println!("{toc_item}");
+                writeln!(&mut stdout, "{toc_item}").context("Failed to write line to stdout")?;
             }
         }
 
