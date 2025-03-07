@@ -4,7 +4,7 @@ use rayon::prelude::*;
 use std::{
     fmt::{self, Display},
     fs,
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 #[derive(clap::Parser)]
@@ -24,7 +24,7 @@ fn main() -> anyhow::Result<()> {
 
         for syn_item in ast.items {
             if let Ok(mut toc_item) = TocItem::try_from(&syn_item) {
-                toc_item.path = Some(path.clone());
+                toc_item.path = Some(path);
                 println!("{toc_item}");
             }
         }
@@ -33,16 +33,16 @@ fn main() -> anyhow::Result<()> {
     })
 }
 
-struct TocItem<'ast> {
-    path: Option<PathBuf>,
+struct TocItem<'a> {
+    path: Option<&'a Path>,
     line: usize,
     column: usize,
     token: &'static str,
-    ident: &'ast syn::Ident,
+    ident: &'a syn::Ident,
 }
 
-impl<'ast> TocItem<'ast> {
-    fn new(token: &'static str, ident: &'ast syn::Ident) -> Self {
+impl<'a> TocItem<'a> {
+    fn new(token: &'static str, ident: &'a syn::Ident) -> Self {
         let span = ident.span();
         let line = span.start().line;
         let column = span.start().column + 1;
@@ -56,10 +56,10 @@ impl<'ast> TocItem<'ast> {
     }
 }
 
-impl<'ast> TryFrom<&'ast syn::Item> for TocItem<'ast> {
+impl<'a> TryFrom<&'a syn::Item> for TocItem<'a> {
     type Error = String;
 
-    fn try_from(item: &'ast syn::Item) -> Result<Self, Self::Error> {
+    fn try_from(item: &'a syn::Item) -> Result<Self, Self::Error> {
         match item {
             syn::Item::Const(item_const) => Ok(TocItem::new("const", &item_const.ident)),
             syn::Item::Enum(item_enum) => Ok(TocItem::new("enum", &item_enum.ident)),
